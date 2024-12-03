@@ -12,7 +12,7 @@
 
 ## 使用说明
 1. git clong 本仓库到本地；  
-2. 下载THUCNews新闻数据集(http://thuctc.thunlp.org/)；
+2. 下载THUCNews新闻数据集(http://thuctc.thunlp.org/)
 3. 将成功下载的数据解压后放到一个空间足够的位置，并检查解压后是否有乱码、其子文件夹是否有14类(数据集具体说明请参照前述官网的说明)；  
 4. 在main函数中调整参数，如：max_text_cnt代表每类新闻采用文本数，可酌情调整。但data_dir需确保是下载数据集的绝对路径；  
 5. 运行main函数，可从控制台和log中观察训练评估状况。
