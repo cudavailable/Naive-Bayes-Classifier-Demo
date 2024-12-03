@@ -2,8 +2,8 @@ import numpy as np
 import joblib
 import jieba
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.model_selection import KFold
 
 from dataset import getClassToIdx, getData
 from model import MultinomialNaiveBayes
@@ -17,14 +17,41 @@ def MakeWordsSet(words_file):
                 words_set.add(word)
     return words_set
 
-def chinese_tokenizer(text):
-    return jieba.cut(text)
-
 def process_text(X):
     return ["".join(jieba.cut(text)) for text in X]
 
 def eval(model, X, y, n_splits):
-    pass
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    metrics = {
+        "accuracy": [],
+        "precision_macro": [],
+        "recall_macro": [],
+        "f1_macro": [],
+        "precision_micro": [],
+        "recall_micro": [],
+        "f1_micro": [],
+    }
+
+    # 根据10折标准划分训练集和测试集
+    for train_idx, test_idx in kf.split(X):
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
+
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+
+        metrics["accuracy"].append(accuracy_score(y_test, y_pred))
+        metrics["precision_macro"].append(precision_score(y_test, y_pred, average="macro"))
+        metrics["recall_macro"].append(recall_score(y_test, y_pred, average="macro"))
+        metrics["f1_macro"].append(f1_score(y_test, y_pred, average="macro"))
+        metrics["precision_micro"].append(precision_score(y_test, y_pred, average="micro"))
+        metrics["recall_micro"].append(recall_score(y_test, y_pred, average="micro"))
+        metrics["f1_micro"].append(f1_score(y_test, y_pred, average="micro"))
+
+        # 计算平均值
+        for key in metrics:
+            metrics[key] = sum(metrics[key]) / len(metrics[key])
+        return metrics
 
 def train(args):
     # class_list = getClassToIdx(args.data_dir)
@@ -46,20 +73,13 @@ def train(args):
     # 模型初始化，评估训练
     print("开始训练...")
     model = MultinomialNaiveBayes()
-    eval(model, X, y, args.n_splits)
+    metrics = eval(model, X, y, args.n_splits)
 
-    pass
-
-    # corpus = [
-    #     "我喜欢机器学习",
-    #     "自然语言处理是人工智能的一个重要方向",
-    #     "深度学习在中文处理上表现优异"
-    # ]
-    #
-    # stopwords_set = MakeWordsSet(args.stopwords_file)
-    # vectorizer = TfidfVectorizer(stop_words=stopwords_set, tokenizer=chinese_tokenizer)
-    #
-    # X = vectorizer.fit_transform(corpus) # 转化为词袋模型
-    #
-    # # 查看TF-IDF矩阵
-    # print(X.toarray())
+    print("实验结果：")
+    print(f"Accuracy: {metrics['accuracy']:.6f}")
+    print(f"Precision (Macro): {metrics['precision_macro']:.6f}")
+    print(f"Recall (Macro): {metrics['recall_macro']:.6f}")
+    print(f"F1-Value (Macro): {metrics['f1_macro']:.6f}")
+    print(f"Precision (Micro): {metrics['precision_micro']:.6f}")
+    print(f"Recall (Micro): {metrics['recall_micro']:.6f}")
+    print(f"F1-Value (Micro): {metrics['f1_micro']:.6f}")
