@@ -1,6 +1,9 @@
 import numpy as np
 from collections import defaultdict
 
+from scipy.sparse import issparse
+
+
 class MultinomialNaiveBayes:
 	"""
 	多项式朴素贝叶斯模型实现
@@ -35,6 +38,12 @@ class MultinomialNaiveBayes:
 			# x_c = np.sum(X_c, dim=1)
 			class_word_count = X_c.sum(axis=0) # 某类主题对应的各词出现频数
 			total_word_count = class_word_count.sum()
+
+			class_word_count = np.array(class_word_count)  # 转换为 ndarray
+			class_word_count = np.squeeze(class_word_count)  # 去掉多余的维度
+
+			# 初始化条件概率矩阵
+			self.cond[c] = np.zeros(self.voc_size)
 			for i in range(self.voc_size):
 				self.cond[c][i] = (class_word_count[i] + 1) / (total_word_count + self.voc_size)
 
@@ -46,6 +55,9 @@ class MultinomialNaiveBayes:
 		"""
 		predictions = []
 		for x in X:
+			# 确保 x 是一维的密集数组
+			x = x.toarray().flatten() if hasattr(x, "toarray") else np.array(x)
+
 			post = {}
 			for c in self.classes:
 				# P(c|X) -> P(c) * product(P(xi|c))

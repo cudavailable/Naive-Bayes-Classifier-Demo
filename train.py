@@ -1,12 +1,15 @@
+import os.path
+
 import numpy as np
 import joblib
 import jieba
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, StratifiedKFold
 
 from dataset import getClassToIdx, getData
 from model import MultinomialNaiveBayes
+from logger import Logger
 
 def MakeWordsSet(words_file):
     words_set = set()
@@ -21,7 +24,8 @@ def process_text(X):
     return ["".join(jieba.cut(text)) for text in X]
 
 def eval(model, X, y, n_splits):
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    # kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
     metrics = {
         "accuracy": [],
         "precision_macro": [],
@@ -31,9 +35,13 @@ def eval(model, X, y, n_splits):
         "recall_micro": [],
         "f1_micro": [],
     }
+    y = np.array(y)  # 确保 y 是 NumPy 数组
 
     # 根据10折标准划分训练集和测试集
-    for train_idx, test_idx in kf.split(X):
+    for train_idx, test_idx in kf.split(X, y):
+        train_idx = np.array(train_idx, dtype=int)  # 确保是整数数组
+        test_idx = np.array(test_idx, dtype=int)
+
         X_train, X_test = X[train_idx], X[test_idx]
         y_train, y_test = y[train_idx], y[test_idx]
 
@@ -56,6 +64,14 @@ def eval(model, X, y, n_splits):
 def train(args):
     # class_list = getClassToIdx(args.data_dir)
     # print(class_list)
+    # 保存日志
+    if args.log_dir is not None and not os.path.exists(args.log_dir):
+        os.mkdir(args.log_dir)
+    logger = Logger(os.path.join(args.log_dir, 'log.txt'))
+
+    logger.write("实验配置：\n---------------------\n")
+    logger.write(f"每类新闻采用文本数：{args.max_text_cnt}\n")
+    logger.write(f"文本特征向量的最大长度：{args.max_features}\n")
 
     # 加载数据
     X, y = getData(args.data_dir, args.max_text_cnt)
@@ -75,11 +91,11 @@ def train(args):
     model = MultinomialNaiveBayes()
     metrics = eval(model, X, y, args.n_splits)
 
-    print("实验结果：")
-    print(f"Accuracy: {metrics['accuracy']:.6f}")
-    print(f"Precision (Macro): {metrics['precision_macro']:.6f}")
-    print(f"Recall (Macro): {metrics['recall_macro']:.6f}")
-    print(f"F1-Value (Macro): {metrics['f1_macro']:.6f}")
-    print(f"Precision (Micro): {metrics['precision_micro']:.6f}")
-    print(f"Recall (Micro): {metrics['recall_micro']:.6f}")
-    print(f"F1-Value (Micro): {metrics['f1_micro']:.6f}")
+    logger.write("\n实验结果：\n---------------------\n")
+    logger.write(f"Accuracy: {metrics['accuracy']:.6f} \n")
+    logger.write(f"Precision (Macro): {metrics['precision_macro']:.6f} \n")
+    logger.write(f"Recall (Macro): {metrics['recall_macro']:.6f} \n")
+    logger.write(f"F1-Value (Macro): {metrics['f1_macro']:.6f} \n")
+    logger.write(f"Precision (Micro): {metrics['precision_micro']:.6f} \n")
+    logger.write(f"Recall (Micro): {metrics['recall_micro']:.6f} \n")
+    logger.write(f"F1-Value (Micro): {metrics['f1_micro']:.6f} \n")
