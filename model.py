@@ -36,7 +36,7 @@ class MultinomialNaiveBayes:
 			class_word_count = X_c.sum(axis=0) # 某类主题对应的各词出现频数
 			total_word_count = class_word_count.sum()
 			for i in range(self.voc_size):
-				self.cond[c][i] = (class_word_count[0, i] + 1) / (total_word_count + self.voc_size)
+				self.cond[c][i] = (class_word_count[i] + 1) / (total_word_count + self.voc_size)
 
 	def predict(self, X):
 		"""
@@ -56,6 +56,6 @@ class MultinomialNaiveBayes:
 						log_prob += x[i] * np.log(self.cond[c][i])
 				post[c] = log_prob # P(c|X)
 
-			predictions.append(max(post, key=post.get())) # 选择对数概率值最大的类别
+			predictions.append(max(post, key=lambda x: post.get(x))) # 选择对数概率值最大的类别
 
 		return predictions
